@@ -9,7 +9,7 @@ const WebRTCVideoChat = () => {
 
   useEffect(() => {
     // Initialize Socket.IO
-    socket.current = io("http://localhost:4000");
+    socket.current = io("https://test-apis-2m3t.onrender.com");
 
     // Initialize PeerConnection
     peerConnection.current = new RTCPeerConnection();
