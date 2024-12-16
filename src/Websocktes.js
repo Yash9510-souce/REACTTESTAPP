@@ -11,6 +11,9 @@ const WebRTCVideoChat = () => {
     // Initialize Socket.IO
     socket.current = io("https://test-apis-2m3t.onrender.com");
 
+    // Join a room (use a unique room ID for signaling between two users)
+    socket.current.emit("join-room", { roomId: "room123" });
+
     // Initialize PeerConnection
     peerConnection.current = new RTCPeerConnection();
 
@@ -33,15 +36,18 @@ const WebRTCVideoChat = () => {
       remoteVideoRef.current.srcObject = event.streams[0];
     };
 
-    // Exchange ICE candidates
+    // Handle ICE candidate exchange
     peerConnection.current.onicecandidate = (event) => {
       if (event.candidate) {
-        socket.current.emit("ice-candidate", event.candidate);
+        socket.current.emit("ice-candidate", {
+          candidate: event.candidate,
+          roomId: "room123",
+        });
       }
     };
 
-    socket.current.on("ice-candidate", (candidate) => {
-      peerConnection.current.addIceCandidate(new RTCIceCandidate(candidate));
+    socket.current.on("ice-candidate", (data) => {
+      peerConnection.current.addIceCandidate(new RTCIceCandidate(data.candidate));
     });
 
     // Handle SDP offer
@@ -49,7 +55,7 @@ const WebRTCVideoChat = () => {
       await peerConnection.current.setRemoteDescription(new RTCSessionDescription(offer));
       const answer = await peerConnection.current.createAnswer();
       await peerConnection.current.setLocalDescription(answer);
-      socket.current.emit("answer", answer);
+      socket.current.emit("answer", { answer, roomId: "room123" });
     });
 
     // Handle SDP answer
@@ -67,14 +73,20 @@ const WebRTCVideoChat = () => {
   const handleStartConnection = async () => {
     const offer = await peerConnection.current.createOffer();
     await peerConnection.current.setLocalDescription(offer);
-    socket.current.emit("offer", offer);
+    socket.current.emit("offer", { offer, roomId: "room123" });
   };
 
   return (
     <div>
       <h1>WebRTC Video Chat</h1>
       <div>
-        <video ref={localVideoRef} autoPlay playsInline style={{ width: "45%", marginRight: "10px" }} />
+        <video
+          ref={localVideoRef}
+          autoPlay
+          playsInline
+          style={{ width: "45%", marginRight: "10px" }}
+          muted // Mute local video to prevent feedback
+        />
         <video ref={remoteVideoRef} autoPlay playsInline style={{ width: "45%" }} />
       </div>
       <button onClick={handleStartConnection}>Start Connection</button>
